@@ -2,12 +2,6 @@
 # pip install pdfplumber pdf2image opencv-python
 
 
-SAVE_NAME = "test1"
-SAVE_FOLDER = "saves/" + SAVE_NAME + '/'
-
-IMAGE_FOLDER = SAVE_FOLDER + "images/"
-INPUT_DEST = SAVE_FOLDER + "raw.pdf"
-OUTPUT_DEST = SAVE_FOLDER + "converted_text.txt"
 
 
 import os
@@ -18,7 +12,7 @@ import numpy as np
 import shutil
 from pdf2image import convert_from_path
 
-def extract_images_with_positions(pdf_path, output_dir="extracted_images"):
+def extract_images_with_positions(pdf_path, output_dir):
     if os.path.exists(output_dir):
         print("Existing Images Deleted from",output_dir)
         shutil.rmtree(output_dir)
@@ -109,26 +103,56 @@ def extract_pdf_text(pdf_path, image_positions):
         images_on_page = image_positions.get(page_num, [])
 
         for (x, y, w, h, filename) in images_on_page:
-            text += f"\n<<{filename}>>\n"
+            text += f"\n<<Image:{filename}>>\n"
 
         page_text.append(text)
         
         main_text.append(" ".join(page_text))
+        
 
-    return "\n".join(main_text)
-
-
-
+    return "\n<<NewPage>>\n".join(main_text)
 
 
 
-# Step 1: Extract images and their positions
-image_positions = extract_images_with_positions(INPUT_DEST, IMAGE_FOLDER)
-
-# Step 2: Extract text and insert <<image_name>> placeholders
-text = extract_pdf_text(INPUT_DEST, image_positions)
 
 
-with open(OUTPUT_DEST,'w',encoding="utf-8") as f:
-    f.write(text)
-print("File Output Written for",SAVE_NAME)
+def convert_file(save_name):
+    save_folder = "saves/" + save_name + '/'
+    image_folder = save_folder + "images/"
+    input_dest = save_folder + "raw.pdf"
+    output_dest = save_folder + "converted_text.txt"
+
+    # Step 1: Extract images and their positions
+    image_positions = extract_images_with_positions(input_dest, image_folder)
+
+    # Step 2: Extract text and insert <<image_name>> placeholders
+    text = extract_pdf_text(input_dest, image_positions)
+
+    #Write file output
+    with open(output_dest,'w',encoding="utf-8") as f:
+        f.write(text)
+    print("File Output Written for",SAVE_NAME)
+
+    #Detect Number of Pages
+    page_num = text.count("<<NewPage>>")
+    print("Output has",page_num,"pages")
+    manifest_dest = save_folder + '/manifest.txt'
+
+    #Read Manifest Info
+    with open(manifest_dest, 'r') as f:
+        manifest_lines = f.read().splitlines()
+    original_location = ':'.join(manifest_lines[1].split(':')[1:])
+
+    #Rewrite Manifest Info
+    manifest_content = '\n'.join([
+        "converted:true",
+        "original_path:" + original_location,
+        "pages:" + str(page_num)
+    ])
+    with open(manifest_dest,'w') as f:
+        f.write(manifest_content)
+    print("Rewrote Manifest")
+
+if __name__ == "__main__":
+    SAVE_NAME = "D4RL"
+    convert_file(SAVE_NAME)

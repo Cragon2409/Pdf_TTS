@@ -19,6 +19,15 @@ def new_save(path, folder_name):
 
     shutil.copyfile(path, new_folder + '/raw.pdf')
 
+    manifest_content = '\n'.join([
+        "converted:false",
+        "original_path:" + path,
+        "pages:0"
+    ])
+    with open(new_folder + '/manifest.txt','w') as f:
+        f.write(manifest_content)
+
+
 
 
 if __name__ == "__main__":
